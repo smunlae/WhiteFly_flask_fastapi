@@ -93,6 +93,45 @@ Compare:
 - Sync latency includes direct DB write
 - Async usually responds faster, DB work finishes in worker
 
+## Railway Test Report (April 20, 2026)
+Target domain:
+- `https://nginx-production-2ce8.up.railway.app`
+
+### Scenario A: High load profile (10 VUs, 30s)
+Flask (`/flask`):
+- checks: `84.44%` (152/180), failed `15.55%`
+- http_req_failed: `14.00%` (42/300)
+- latency: avg `71.52ms`, p95 `96.79ms`
+
+FastAPI (`/fastapi`):
+- checks: `44.44%` (80/180), failed `55.55%`
+- http_req_failed: `33.33%` (100/300)
+- latency: avg `79.39ms`, p95 `95.85ms`
+
+Interpretation:
+- This scenario primarily validated anti-abuse controls.
+- FastAPI has endpoint-level limiter (`10 req / 60s` per IP), so many POST requests were intentionally rejected under this profile.
+- Nginx and Flask paths also showed request rejections under burst traffic.
+
+### Scenario B: Baseline profile for fair comparison (1 VU, 60s)
+Flask (`/flask`):
+- checks: `100%` (30/30)
+- http_req_failed: `0.00%` (0/50)
+- latency: avg `76.25ms`, p95 `99.91ms`
+- throughput: `50` requests (`0.781 req/s`)
+
+FastAPI (`/fastapi`):
+- checks: `100%` (30/30)
+- http_req_failed: `0.00%` (0/50)
+- latency: avg `79.54ms`, p95 `97.07ms`
+- throughput: `50` requests (`0.779 req/s`)
+
+Final conclusions:
+- Both deployments are stable behind Nginx under non-abusive load.
+- Flask and FastAPI show very similar baseline performance in this environment.
+- High-load failures were expected due to anti-bot/rate-limit protections, not because of core business-flow crashes.
+- For final reporting, both baseline and abuse scenarios should be shown together: baseline for performance, abuse for security behavior.
+
 ## Notes
 - Flask and FastAPI are intentionally separated by folder and runtime.
 - `.env` is excluded from git.
