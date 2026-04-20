@@ -1,0 +1,134 @@
+﻿version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-whitefly}
+      POSTGRES_USER: ${POSTGRES_USER:-whitefly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-whitefly}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whitefly} -d ${POSTGRES_DB:-whitefly}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flask_web:
+    build: ./flask_app
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-whitefly}:${POSTGRES_PASSWORD:-whitefly}@postgres:5432/${POSTGRES_DB:-whitefly}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LIMITER_STORAGE_URI: redis://redis:6379/2
+      BASE_PATH: /flask
+      MIN_SUBMIT_SECONDS: ${MIN_SUBMIT_SECONDS:-2}
+      MAX_NAME_LENGTH: ${MAX_NAME_LENGTH:-100}
+      FPJS_PUBLIC_KEY: ${FPJS_PUBLIC_KEY:-}
+      FPJS_SERVER_API_KEY: ${FPJS_SERVER_API_KEY:-}
+      FPJS_SERVER_API_BASE_URL: ${FPJS_SERVER_API_BASE_URL:-https://api.fpjs.io}
+      FPJS_CONFIDENCE_THRESHOLD: ${FPJS_CONFIDENCE_THRESHOLD:-0.5}
+      FPJS_VERIFY_TIMEOUT_SECONDS: ${FPJS_VERIFY_TIMEOUT_SECONDS:-3}
+      FPJS_FAIL_OPEN: ${FPJS_FAIL_OPEN:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  flask_worker:
+    build: ./flask_app
+    command: celery -A app.tasks.celery_app worker --loglevel=INFO --concurrency=2
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-whitefly}:${POSTGRES_PASSWORD:-whitefly}@postgres:5432/${POSTGRES_DB:-whitefly}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LIMITER_STORAGE_URI: redis://redis:6379/2
+      BASE_PATH: /flask
+      MIN_SUBMIT_SECONDS: ${MIN_SUBMIT_SECONDS:-2}
+      MAX_NAME_LENGTH: ${MAX_NAME_LENGTH:-100}
+      FPJS_PUBLIC_KEY: ${FPJS_PUBLIC_KEY:-}
+      FPJS_SERVER_API_KEY: ${FPJS_SERVER_API_KEY:-}
+      FPJS_SERVER_API_BASE_URL: ${FPJS_SERVER_API_BASE_URL:-https://api.fpjs.io}
+      FPJS_CONFIDENCE_THRESHOLD: ${FPJS_CONFIDENCE_THRESHOLD:-0.5}
+      FPJS_VERIFY_TIMEOUT_SECONDS: ${FPJS_VERIFY_TIMEOUT_SECONDS:-3}
+      FPJS_FAIL_OPEN: ${FPJS_FAIL_OPEN:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fastapi_web:
+    build: ./fastapi_app
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-whitefly}:${POSTGRES_PASSWORD:-whitefly}@postgres:5432/${POSTGRES_DB:-whitefly}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://redis:6379/2
+      BASE_PATH: /fastapi
+      MIN_SUBMIT_SECONDS: ${MIN_SUBMIT_SECONDS:-2}
+      MAX_NAME_LENGTH: ${MAX_NAME_LENGTH:-100}
+      FPJS_PUBLIC_KEY: ${FPJS_PUBLIC_KEY:-}
+      FPJS_SERVER_API_KEY: ${FPJS_SERVER_API_KEY:-}
+      FPJS_SERVER_API_BASE_URL: ${FPJS_SERVER_API_BASE_URL:-https://api.fpjs.io}
+      FPJS_CONFIDENCE_THRESHOLD: ${FPJS_CONFIDENCE_THRESHOLD:-0.5}
+      FPJS_VERIFY_TIMEOUT_SECONDS: ${FPJS_VERIFY_TIMEOUT_SECONDS:-3}
+      FPJS_FAIL_OPEN: ${FPJS_FAIL_OPEN:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fastapi_worker:
+    build: ./fastapi_app
+    command: celery -A app.tasks.celery_app worker --loglevel=INFO --concurrency=2
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-whitefly}:${POSTGRES_PASSWORD:-whitefly}@postgres:5432/${POSTGRES_DB:-whitefly}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://redis:6379/2
+      BASE_PATH: /fastapi
+      MIN_SUBMIT_SECONDS: ${MIN_SUBMIT_SECONDS:-2}
+      MAX_NAME_LENGTH: ${MAX_NAME_LENGTH:-100}
+      FPJS_PUBLIC_KEY: ${FPJS_PUBLIC_KEY:-}
+      FPJS_SERVER_API_KEY: ${FPJS_SERVER_API_KEY:-}
+      FPJS_SERVER_API_BASE_URL: ${FPJS_SERVER_API_BASE_URL:-https://api.fpjs.io}
+      FPJS_CONFIDENCE_THRESHOLD: ${FPJS_CONFIDENCE_THRESHOLD:-0.5}
+      FPJS_VERIFY_TIMEOUT_SECONDS: ${FPJS_VERIFY_TIMEOUT_SECONDS:-3}
+      FPJS_FAIL_OPEN: ${FPJS_FAIL_OPEN:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      flask_web:
+        condition: service_started
+      fastapi_web:
+        condition: service_started
+
+volumes:
+  postgres_data:

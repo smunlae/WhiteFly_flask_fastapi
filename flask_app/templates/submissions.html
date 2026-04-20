@@ -1,0 +1,34 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Stored Submissions</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Framework</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>IP</th>
+                <th>Fingerprint</th>
+                <th>Created At (UTC)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in submissions %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.first_name }} {{ item.last_name }}</td>
+                    <td>{{ item.framework }}</td>
+                    <td>{{ item.source_type }}</td>
+                    <td>{{ item.status }}</td>
+                    <td>{{ item.client_ip or "-" }}</td>
+                    <td>{{ item.fingerprint or "-" }}</td>
+                    <td>{{ item.created_at }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

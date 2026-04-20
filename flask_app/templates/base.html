@@ -1,0 +1,61 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WhiteFly Flask Service</title>
+    <link rel="stylesheet" href="{{ base_path }}/static/styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>WhiteFly Flask Service</h1>
+        <nav>
+            <a href="{{ base_path }}/">Home</a>
+            <a href="{{ base_path }}/form-sync">Sync Form</a>
+            <a href="{{ base_path }}/form-async">Async Form</a>
+            <a href="{{ base_path }}/submissions">Submissions</a>
+        </nav>
+    </header>
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    {% if fpjs_public_key %}
+    <script>
+    (async function () {
+        const forms = document.querySelectorAll('form[data-fp-form="1"]');
+        if (!forms.length) {
+            return;
+        }
+        try {
+            const module = await import('https://fpjscdn.net/v3/{{ fpjs_public_key }}');
+            const fp = await module.load();
+            const result = await fp.get();
+            forms.forEach((form) => {
+                const visitorField = form.querySelector('input[name="fp_visitor_id"]');
+                const requestField = form.querySelector('input[name="fp_request_id"]');
+                const fingerprintField = form.querySelector('input[name="fingerprint"]');
+                if (visitorField) {
+                    visitorField.value = result.visitorId || '';
+                }
+                if (requestField) {
+                    requestField.value = result.requestId || '';
+                }
+                if (fingerprintField) {
+                    fingerprintField.value = result.visitorId || '';
+                }
+            });
+        } catch (error) {
+            console.error('FingerprintJS initialization failed', error);
+        }
+    })();
+    </script>
+    {% endif %}
+</body>
+</html>

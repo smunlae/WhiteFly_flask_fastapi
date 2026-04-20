@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Synchronous Form</h2>
+    <p>This form is validated and stored directly in PostgreSQL.</p>
+    {% if errors %}
+        <div class="alert error">
+            {% for error in errors %}
+                <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form method="post" action="{{ base_path }}/form-sync" data-fp-form="1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="first_name">First name</label>
+        <input id="first_name" name="first_name" type="text" maxlength="100" required>
+
+        <label for="last_name">Last name</label>
+        <input id="last_name" name="last_name" type="text" maxlength="100" required>
+
+        <label class="hidden-field" for="website">Website</label>
+        <input class="hidden-field" id="website" name="website" type="text" autocomplete="off" tabindex="-1">
+
+        <input id="fingerprint" name="fingerprint" type="hidden" value="">
+        <input id="fp_request_id" name="fp_request_id" type="hidden" value="">
+        <input id="fp_visitor_id" name="fp_visitor_id" type="hidden" value="">
+
+        <button type="submit">Submit synchronously</button>
+    </form>
+</section>
+{% endblock %}
