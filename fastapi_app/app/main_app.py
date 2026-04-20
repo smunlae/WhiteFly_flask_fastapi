@@ -23,7 +23,11 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def startup():
-        redis_client = redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
-        await FastAPILimiter.init(redis_client)
+        try:
+            redis_client = redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
+            await FastAPILimiter.init(redis_client)
+        except Exception as e:
+            print(f"Warning: Failed to initialize rate limiter: {e}")
+            # App will continue without rate limiting
 
     return app
